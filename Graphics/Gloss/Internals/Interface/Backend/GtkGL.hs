@@ -54,12 +54,8 @@ instance Backend GtkGLState where
         installWindowCloseCallback = (\_ -> return ())
 
         installReshapeCallback     = installReshapeCallbackGtkGL
-
-        installKeyMouseCallback    = installKeyMouseCallbackGLUT
-
-        -- TODO: iperez: To be completed
-        installMotionCallback      = \_ _ -> return ()  -- installMotionCallbackGLUT
-
+        installKeyMouseCallback    = installKeyMouseCallbackGtkGL
+        installMotionCallback      = installMotionCallbackGtkGL
         installIdleCallback        = installIdleCallbackGtkGL
 
         -- Call the main gui
@@ -214,12 +210,11 @@ callbackReshape ref callbacks (GLUTGtk.Size w h)
              sequence_ [f ref sz | Reshape f <- callbacks]
 
 -- KeyMouse Callback ----------------------------------------------------------
--- FIXME: iperez: ignore for now
-installKeyMouseCallbackGLUT 
+installKeyMouseCallbackGtkGL
         :: IORef GtkGLState -> [Callback]
         -> IO ()
 
-installKeyMouseCallbackGLUT ref callbacks
+installKeyMouseCallbackGtkGL ref callbacks
         = do (GtkGLState mgl _ _) <- readIORef ref
              flip (maybe (return ())) mgl $ \gl ->
                modifyIORef (GLUTGtk.keyboardMouseCallback gl) $ const $
@@ -246,25 +241,27 @@ callbackKeyMouse ref callbacks key keystate modifiers mpos
      modifiers' = gtkModifiersToModifiers modifiers
      pos        = maybe (0,0) (\(GLUTGtk.Position x y) -> (fromEnum x, fromEnum y)) mpos
 
--- -- Motion Callback ------------------------------------------------------------
--- installMotionCallbackGLUT 
---         :: IORef GLUTState -> [Callback]
---         -> IO ()
--- 
--- installMotionCallbackGLUT ref callbacks
---  = do   GLUT.motionCallback        $= Just (callbackMotion ref callbacks)
---         GLUT.passiveMotionCallback $= Just (callbackMotion ref callbacks)
--- 
--- callbackMotion
---         :: IORef GLUTState -> [Callback]
---         -> GLUT.Position
---         -> IO ()
--- 
--- callbackMotion ref callbacks (GLUT.Position posX posY)
---  = do   let pos = (fromEnum posX, fromEnum posY)
---         sequence_
---          $ map  (\f -> f pos)
---                 [f ref | Motion f <- callbacks]
+-- Motion Callback ------------------------------------------------------------
+installMotionCallbackGtkGL
+        :: IORef GtkGLState -> [Callback]
+        -> IO ()
+
+installMotionCallbackGtkGL ref callbacks
+ = do (GtkGLState mgl _ _) <- readIORef ref
+      flip (maybe (return ())) mgl $ \gl ->
+        modifyIORef (GLUTGtk.mouseMoveCallback gl) $ const $
+          (callbackMotion ref callbacks)
+
+callbackMotion
+        :: IORef GtkGLState -> [Callback]
+        -> GLUTGtk.Position
+        -> IO ()
+
+callbackMotion ref callbacks (GLUTGtk.Position posX posY)
+ = do   let pos = (fromEnum posX, fromEnum posY)
+        sequence_
+         $ map  (\f -> f pos)
+                [f ref | Motion f <- callbacks]
 
 
 -- Idle Callback --------------------------------------------------------------
@@ -303,7 +300,6 @@ gtkKeyToKey (GLUTGtk.MouseButton btn) = case btn of
     GLUTGtk.MiddleButton  -> Just $ MouseButton MiddleButton
     GLUTGtk.RightButton   -> Just $ MouseButton RightButton
     GLUTGtk.OtherButton i -> Just $ MouseButton (AdditionalButton i)
-    _                     -> Nothing
 
 -- | Convert GLUTGtk's key state to our internal ones.
 gtkKeyStateToKeyState :: GLUTGtk.KeyState -> KeyState

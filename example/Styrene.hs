@@ -1,6 +1,8 @@
+{-# LANGUAGE PackageImports #-}
 
-import           Graphics.Gloss
+import "gloss-gtk" Graphics.Gloss
 import qualified Graphics.UI.Gtk as Gtk
+import           Graphics.UI.Gtk (AttrOp((:=)))
 -- import           Graphics.UI.Gtk.OpenGL
 -- import qualified Graphics.Rendering.OpenGL as GL
 -- import           Graphics.Rendering.OpenGL (($=))

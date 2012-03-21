@@ -17,6 +17,7 @@ type RealizeCallback = IO ()
 type ReshapeCallback = Size -> IO ()
 type DisplayCallback = IO ()
 type KeyboardMouseCallback = Key -> KeyState -> [Modifier] -> (Maybe Position) -> IO ()
+type MouseMoveCallback     = Position -> IO ()
 
 data Size = Size Int Int
   deriving (Eq, Ord, Show)
@@ -35,6 +36,7 @@ data GLUTGtk = GLUTGtk
   , reshapeCallback       :: IORef ReshapeCallback
   , displayCallback       :: IORef DisplayCallback
   , keyboardMouseCallback :: IORef KeyboardMouseCallback
+  , mouseMoveCallback     :: IORef MouseMoveCallback
   , postRedisplay         :: IO ()
   , widget                :: EventBox
   }
@@ -47,6 +49,7 @@ glut eventb (Size width height) = do
   displayCallback'       <- newIORef $ return ()
   reshapeCallback'       <- newIORef $ \_ -> return ()
   keyboardMouseCallback' <- newIORef $ \_ _ _ _ -> return ()
+  mouseMoveCallback'     <- newIORef $ \_ -> return ()
 
   -- Initialise canvas
   config <- glConfigNew [ GLModeRGBA, GLModeDouble ]
@@ -91,12 +94,21 @@ glut eventb (Size width height) = do
   _ <- eventb `on` keyPressEvent      $ tryEvent $ handleKey Down
   _ <- eventb `on` keyReleaseEvent    $ tryEvent $ handleKey Up
 
+  let handleMousemove = do
+        (x,y) <- eventCoordinates
+        liftIO $ do
+           cb <- readIORef mouseMoveCallback'
+           cb (Position x y)
+
+  _ <- eventb `on` motionNotifyEvent  $ tryEvent $ handleMousemove
+
   -- 
   return $ GLUTGtk
     { realizeCallback       = realizeCallback'
     , displayCallback       = displayCallback'
     , reshapeCallback       = reshapeCallback'
     , keyboardMouseCallback = keyboardMouseCallback'
+    , mouseMoveCallback     = mouseMoveCallback'
     , postRedisplay         = widgetQueueDraw canvas
     , widget                = eventb
     }

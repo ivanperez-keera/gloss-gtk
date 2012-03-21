@@ -3,7 +3,7 @@
 -- It should be substituted by our own code or simply removed.
 module Graphics.UI.GLUTGtk
    ( module Graphics.UI.GLUTGtk
-   , KeyVal, MouseButton, Modifier(..)
+   , KeyVal, MouseButton(..), Modifier(..)
    )
   where
 
@@ -27,7 +27,7 @@ data Position = Position Double Double
 data KeyState = Down | Up
   deriving (Eq, Ord, Show)
 
-data Key = Key KeyVal | MouseButton MouseButton
+data Key = Key String | MouseButton MouseButton
   deriving (Eq, Show)
 
 data GLUTGtk = GLUTGtk
@@ -81,7 +81,7 @@ glut eventb (Size width height) = do
           cb <- readIORef keyboardMouseCallback'
           cb (MouseButton b) s ms (Just (Position x y))
   let handleKey s = do
-        v      <- eventKeyVal
+        v      <- eventKeyName
         ms     <- eventModifier
         liftIO $ do
           cb <- readIORef keyboardMouseCallback'

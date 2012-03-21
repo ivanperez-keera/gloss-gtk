@@ -4,6 +4,7 @@ module Graphics.Gloss.Internals.Interface.Backend.GtkGL
         (GtkGLState)
 where
 
+import           Data.Char (toLower)
 import           Data.IORef
 import           Data.Maybe
 import           Control.Monad
@@ -12,7 +13,8 @@ import           Graphics.Gloss.Internals.Interface.Backend.Types
 import           Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.Rendering.OpenGL                        as GL
 import qualified Graphics.UI.GLUTGtk                              as GLUTGtk       -- (glut, Size(Size), widget)
-import           Graphics.UI.Gtk                                  hiding (Display) -- (containerAdd)
+-- import           Graphics.UI.Gtk                                  hiding (Display) -- (containerAdd)
+import           Graphics.UI.Gtk                                  (AttrOp((:=)))
 import qualified Graphics.UI.Gtk                                  as Gtk
 import           Graphics.UI.Gtk.OpenGL
 import qualified System.Exit                                      as System
@@ -64,7 +66,7 @@ instance Backend GtkGLState where
         -- This function will return when something calls leaveMainLoop
         runMainLoop ref 
          = do (GtkGLState mgl windowed _) <- readIORef ref
-              when (windowed && isJust mgl) mainGUI
+              when (windowed && isJust mgl) Gtk.mainGUI
 
         postRedisplay ref
          = do (GtkGLState mgl _ _) <- readIORef ref
@@ -100,7 +102,7 @@ initializeGtkGL ref debug = do
      -- We don't know whether these were called from somewhere else, so we have
      -- to do it here instead.
      _ <- initGL  -- we ignore gl args
-     _ <- initGUI -- we ignore gtk args
+     _ <- Gtk.initGUI -- we ignore gtk args
 
      -- Save initial time
      ts <- getTime Monotonic
@@ -119,7 +121,7 @@ openWindowGtkGL ref display
         case display of
           InWindow windowName (sizeX, sizeY) (posX, posY) -> 
             do w      <- Gtk.windowNew 
-               eventb <- eventBoxNew 
+               eventb <- Gtk.eventBoxNew 
                gl     <- GLUTGtk.glut eventb (GLUTGtk.Size sizeX sizeY)
                modifyIORef (GLUTGtk.realizeCallback gl) $ const $
                  GL.drawBuffer $= GL.BackBuffers
@@ -138,7 +140,7 @@ openWindowGtkGL ref display
 
           InWidget bin (sizeX, sizeY) ->
             do gl <- GLUTGtk.glut bin (GLUTGtk.Size sizeX sizeY)
-               widgetShowAll (GLUTGtk.widget gl)
+               Gtk.widgetShowAll (GLUTGtk.widget gl)
                modifyIORef (GLUTGtk.realizeCallback gl) $ const $
                  GL.drawBuffer $= GL.BackBuffers
                modifyIORef ref (\st -> st { glGtk      = Just gl
@@ -232,16 +234,17 @@ callbackKeyMouse
         -> IO ()
 
 callbackKeyMouse ref callbacks key keystate modifiers mpos
-  = sequence_
-  $ map (\f -> f key' keyState' modifiers' pos)
-        [f ref | KeyMouse f <- callbacks]
+ | isNothing key'
+ = return ()
+
+ | otherwise
+ = sequence_ $ map (\f -> f (fromJust key') keyState' modifiers' pos)
+                   [f ref | KeyMouse f <- callbacks]
    where
      key'       = gtkKeyToKey key
      keyState'  = gtkKeyStateToKeyState keystate
      modifiers' = gtkModifiersToModifiers modifiers
      pos        = maybe (0,0) (\(GLUTGtk.Position x y) -> (fromEnum x, fromEnum y)) mpos
-
-gtkKeyToKey             = undefined
 
 -- -- Motion Callback ------------------------------------------------------------
 -- installMotionCallbackGLUT 
@@ -272,7 +275,7 @@ installIdleCallbackGtkGL
 installIdleCallbackGtkGL ref callbacks = do
   widgetExists <- fmap (isJust.glGtk) $ readIORef ref
   when widgetExists $ void $
-    Gtk.idleAdd callback priorityDefaultIdle
+    Gtk.idleAdd callback Gtk.priorityDefaultIdle
 
   where callback = callbackIdle ref callbacks >> return True
 
@@ -283,23 +286,24 @@ callbackIdle
 callbackIdle ref callbacks
         = sequence_ [ f ref | (Idle f) <- callbacks]
 
--------------------------------------------------------------------------------
----- | Convert GLUTs key codes to our internal ones.
---gtkKeyToKey :: String -> Key
---gtkKeyToKey key 
--- = case key of
---        "\32"                            -> SpecialKey KeySpace
---        "\13"                            -> SpecialKey KeyEnter
---        "\9"                             -> SpecialKey KeyTab
---        "\ESC"                           -> SpecialKey KeyEsc
---        "\DEL"                           -> SpecialKey KeyDelete
---        [c]                              -> Char c
-        -- MouseButton GLUT.LeftButton           -> MouseButton LeftButton
-        -- MouseButton GLUT.MiddleButton         -> MouseButton MiddleButton
-        -- MouseButton GLUT.RightButton          -> MouseButton RightButton
-        -- MouseButton GLUT.WheelUp              -> MouseButton WheelUp
-        -- MouseButton GLUT.WheelDown            -> MouseButton WheelDown
-        -- MouseButton (GLUT.AdditionalButton i) -> MouseButton (AdditionalButton i)
+-----------------------------------------------------------------------------
+-- | Convert GLUTs key codes to our internal ones.
+gtkKeyToKey :: GLUTGtk.Key-> Maybe Key
+gtkKeyToKey (GLUTGtk.Key key)
+ = case key of
+    "Space"  -> Just $ SpecialKey KeySpace
+    "Return" -> Just $ SpecialKey KeyEnter
+    "Tab"    -> Just $ SpecialKey KeyTab
+    "Escape" -> Just $ SpecialKey KeyEsc
+    "Delete" -> Just $ SpecialKey KeyDelete
+    [x]      -> Just $ Char (toLower x)
+    _        -> Nothing
+gtkKeyToKey (GLUTGtk.MouseButton btn) = case btn of
+    GLUTGtk.LeftButton    -> Just $ MouseButton LeftButton
+    GLUTGtk.MiddleButton  -> Just $ MouseButton MiddleButton
+    GLUTGtk.RightButton   -> Just $ MouseButton RightButton
+    GLUTGtk.OtherButton i -> Just $ MouseButton (AdditionalButton i)
+    _                     -> Nothing
 
 -- | Convert GLUTGtk's key state to our internal ones.
 gtkKeyStateToKeyState :: GLUTGtk.KeyState -> KeyState

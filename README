@@ -1,0 +1,6 @@
+This project adds a new backend to gloss that can be used to embed
+gloss images/animations/simulations in GTK+ applications. It uses
+the gtkglext package available in Hackage.
+
+Current status is: not finished, still under development.  Do not use (I'm not
+joking here) in production just yet.

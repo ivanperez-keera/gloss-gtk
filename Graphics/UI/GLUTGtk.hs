@@ -1,7 +1,11 @@
 -- | FIXME: iperez: This code was taken from pastebin. Although it is publicly
 -- available, its redistribution can present a violation of the copyright law.
 -- It should be substituted by our own code or simply removed.
-module Graphics.UI.GLUTGtk where
+module Graphics.UI.GLUTGtk
+   ( module Graphics.UI.GLUTGtk
+   , KeyVal, MouseButton, Modifier(..)
+   )
+  where
 
 import           Control.Monad             (join)
 import           Control.Monad.Trans       (liftIO)
@@ -23,7 +27,7 @@ data Position = Position Double Double
 data KeyState = Down | Up
   deriving (Eq, Ord, Show)
 
-data Key = Key String | Char Char | MouseButton MouseButton
+data Key = Key KeyVal | MouseButton MouseButton
   deriving (Eq, Show)
 
 data GLUTGtk = GLUTGtk
@@ -77,7 +81,7 @@ glut eventb (Size width height) = do
           cb <- readIORef keyboardMouseCallback'
           cb (MouseButton b) s ms (Just (Position x y))
   let handleKey s = do
-        v      <- eventKeyName
+        v      <- eventKeyVal
         ms     <- eventModifier
         liftIO $ do
           cb <- readIORef keyboardMouseCallback'

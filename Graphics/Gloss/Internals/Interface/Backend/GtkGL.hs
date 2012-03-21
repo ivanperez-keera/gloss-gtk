@@ -11,7 +11,7 @@ import           Control.Concurrent
 import           Graphics.Gloss.Internals.Interface.Backend.Types
 import           Graphics.Rendering.OpenGL (($=))
 import qualified Graphics.Rendering.OpenGL                        as GL
-import           Graphics.UI.GLUTGtk                              as GLUTGtk       -- (glut, Size(Size), widget)
+import qualified Graphics.UI.GLUTGtk                              as GLUTGtk       -- (glut, Size(Size), widget)
 import           Graphics.UI.Gtk                                  hiding (Display) -- (containerAdd)
 import qualified Graphics.UI.Gtk                                  as Gtk
 import           Graphics.UI.Gtk.OpenGL
@@ -24,7 +24,7 @@ import           System.Posix.Clock
 --   not, and we need to keep track of the time when
 --   the initialisation took place.
 data GtkGLState = GtkGLState
-  { glGtk      :: (Maybe GLUTGtk)   -- gl widget, if any
+  { glGtk      :: (Maybe GLUTGtk.GLUTGtk)   -- gl widget, if any
   , glWindowed :: Bool              -- whether gl is the top widget or not
   , glInitTime :: (Maybe TimeSpec)  -- when initialised was first called
   }
@@ -53,8 +53,9 @@ instance Backend GtkGLState where
 
         installReshapeCallback     = installReshapeCallbackGtkGL
 
+        installKeyMouseCallback    = installKeyMouseCallbackGLUT
+
         -- TODO: iperez: To be completed
-        installKeyMouseCallback    = \_ _ -> return () -- installKeyMouseCallbackGLUT
         installMotionCallback      = \_ _ -> return ()  -- installMotionCallbackGLUT
 
         installIdleCallback        = installIdleCallbackGtkGL
@@ -71,7 +72,7 @@ instance Backend GtkGLState where
 
         getWindowDimensions ref 
          = do (GtkGLState mgl windowed _) <- readIORef ref
-              maybe (return (0,0)) (Gtk.widgetGetSize . widget) mgl
+              maybe (return (0,0)) (Gtk.widgetGetSize . GLUTGtk.widget) mgl
               -- putStrLn.("new size" ++).show =<< x
 
         elapsedTime ref
@@ -119,8 +120,9 @@ openWindowGtkGL ref display
           InWindow windowName (sizeX, sizeY) (posX, posY) -> 
             do w      <- Gtk.windowNew 
                eventb <- eventBoxNew 
-               gl     <- glut eventb (Size sizeX sizeY)
-               modifyIORef (realizeCallback gl) $ const $ GL.drawBuffer $= GL.BackBuffers
+               gl     <- GLUTGtk.glut eventb (GLUTGtk.Size sizeX sizeY)
+               modifyIORef (GLUTGtk.realizeCallback gl) $ const $
+                 GL.drawBuffer $= GL.BackBuffers
                  -- glDrawableSwapBuffers
 
                Gtk.set w [ Gtk.containerBorderWidth := 0
@@ -132,13 +134,15 @@ openWindowGtkGL ref display
                -- Update state
                modifyIORef ref (\st -> st { glGtk = Just gl , glWindowed = True })
 
-          FullScreen (sizeX, sizeY) -> error "Cannot go fullscreen in Gtk"
+          FullScreen _ -> error "Cannot go fullscreen in Gtk"
 
           InWidget bin (sizeX, sizeY) ->
-            do gl <- glut bin (Size sizeX sizeY)
-               widgetShowAll (widget gl)
-               modifyIORef (realizeCallback gl) $ const $ GL.drawBuffer $= GL.BackBuffers
-               modifyIORef ref (\st -> st { glGtk = Just gl, glWindowed = False })
+            do gl <- GLUTGtk.glut bin (GLUTGtk.Size sizeX sizeY)
+               widgetShowAll (GLUTGtk.widget gl)
+               modifyIORef (GLUTGtk.realizeCallback gl) $ const $
+                 GL.drawBuffer $= GL.BackBuffers
+               modifyIORef ref (\st -> st { glGtk      = Just gl
+                                          , glWindowed = False })
 
 -- Dump State -----------------------------------------------------------------
 dumpStateGtkGL
@@ -158,7 +162,7 @@ installDisplayCallbackGtkGL
 installDisplayCallbackGtkGL ref callbacks
         = do (GtkGLState mgl _ _) <- readIORef ref
              flip (maybe (return ())) mgl $ \gl ->
-               modifyIORef (displayCallback gl) $ \_ -> 
+               modifyIORef (GLUTGtk.displayCallback gl) $ \_ -> 
                                      (callbackDisplay ref callbacks)
  
 callbackDisplay 
@@ -191,7 +195,7 @@ installReshapeCallbackGtkGL
 installReshapeCallbackGtkGL ref callbacks
         = do (GtkGLState mgl _ _) <- readIORef ref
              flip (maybe (return ())) mgl $ \gl ->
-               modifyIORef (reshapeCallback gl) $ \_ -> 
+               modifyIORef (GLUTGtk.reshapeCallback gl) $ const $
                                (callbackReshape ref callbacks)
 
 callbackReshape
@@ -199,13 +203,13 @@ callbackReshape
         -> GLUTGtk.Size
         -> IO ()
 
-callbackReshape ref callbacks (Size w h)
+callbackReshape ref callbacks (GLUTGtk.Size w h)
         = let sz = (fromEnum w, fromEnum h)
-          in do -- iperez: these do not seem to be necessary
-                -- GL.matrixMode $= GL.Projection
-                -- GL.loadIdentity
-                -- GL.ortho 45.0 (fromIntegral w) 45.0 (fromIntegral h) (1.0) 1.0
-                sequence_ [f ref sz | Reshape f <- callbacks]
+          in -- iperez: these do not seem to be necessary
+             -- GL.matrixMode $= GL.Projection
+             -- GL.loadIdentity
+             -- GL.ortho 45.0 (fromIntegral w) 45.0 (fromIntegral h) (1.0) 1.0
+             sequence_ [f ref sz | Reshape f <- callbacks]
 
 -- KeyMouse Callback ----------------------------------------------------------
 -- FIXME: iperez: ignore for now
@@ -214,25 +218,30 @@ installKeyMouseCallbackGLUT
         -> IO ()
 
 installKeyMouseCallbackGLUT ref callbacks
-        = return () -- GLUT.keyboardMouseCallback $= Just (callbackKeyMouse ref callbacks)
+        = do (GtkGLState mgl _ _) <- readIORef ref
+             flip (maybe (return ())) mgl $ \gl ->
+               modifyIORef (GLUTGtk.keyboardMouseCallback gl) $ const $
+                               (callbackKeyMouse ref callbacks)
 
--- callbackKeyMouse
---         :: IORef GLUTState -> [Callback]
---         -> GLUTGtk.Key
---         -> GLUTGtk.KeyState
---         -> GLUTGtk.Modifiers
---         -> GLUTGtk.Position
---         -> IO ()
--- 
--- callbackKeyMouse ref callbacks key keystate modifiers (GLUTGtk.Position posX posY)
---   = sequence_
---   $ map (\f -> f key' keyState' modifiers' pos)
---       [f ref | KeyMouse f <- callbacks]
---   where
---     key'       = gtkKeyToKey key
---     keyState'  = gtkKeyStateToKeyState keystate
---     modifiers' = gtkModifiersToModifiers modifiers
---     pos        = (fromEnum posX, fromEnum posY)
+callbackKeyMouse
+        :: IORef GtkGLState -> [Callback]
+        -> GLUTGtk.Key
+        -> GLUTGtk.KeyState
+        -> [Gtk.Modifier]
+        -> Maybe GLUTGtk.Position
+        -> IO ()
+
+callbackKeyMouse ref callbacks key keystate modifiers mpos
+  = sequence_
+  $ map (\f -> f key' keyState' modifiers' pos)
+        [f ref | KeyMouse f <- callbacks]
+   where
+     key'       = gtkKeyToKey key
+     keyState'  = gtkKeyStateToKeyState keystate
+     modifiers' = gtkModifiersToModifiers modifiers
+     pos        = maybe (0,0) (\(GLUTGtk.Position x y) -> (fromEnum x, fromEnum y)) mpos
+
+gtkKeyToKey             = undefined
 
 -- -- Motion Callback ------------------------------------------------------------
 -- installMotionCallbackGLUT 
@@ -291,22 +300,20 @@ callbackIdle ref callbacks
         -- MouseButton GLUT.WheelUp              -> MouseButton WheelUp
         -- MouseButton GLUT.WheelDown            -> MouseButton WheelDown
         -- MouseButton (GLUT.AdditionalButton i) -> MouseButton (AdditionalButton i)
--- 
--- 
--- -- | Convert GLUTs key states to our internal ones.
--- glutKeyStateToKeyState :: GLUT.KeyState -> KeyState
--- glutKeyStateToKeyState state
---  = case state of
---         GLUT.Down       -> Down
---         GLUT.Up         -> Up
--- 
--- 
--- -- | Convert GLUTs key states to our internal ones.
--- glutModifiersToModifiers 
---         :: GLUT.Modifiers
---         -> Modifiers
---         
--- glutModifiersToModifiers (GLUT.Modifiers a b c) 
---         = Modifiers     (glutKeyStateToKeyState a)
---                         (glutKeyStateToKeyState b)
---                         (glutKeyStateToKeyState c)
+
+-- | Convert GLUTGtk's key state to our internal ones.
+gtkKeyStateToKeyState :: GLUTGtk.KeyState -> KeyState
+gtkKeyStateToKeyState GLUTGtk.Down = Down
+gtkKeyStateToKeyState GLUTGtk.Up   = Up
+
+-- | Convert GLUTs key states to our internal ones.
+gtkModifiersToModifiers 
+        :: [GLUTGtk.Modifier]
+        -> Modifiers
+        
+gtkModifiersToModifiers mods
+        = Modifiers shiftPressed ctrlPressed altPressed
+
+ where shiftPressed = if (GLUTGtk.Shift   `elem` mods) then Down else Up
+       ctrlPressed  = if (GLUTGtk.Control `elem` mods) then Down else Up
+       altPressed   = if (GLUTGtk.Alt     `elem` mods) then Down else Up

@@ -7,6 +7,7 @@ module Graphics.Gloss.Internals.Interface.Backend.Types
 where
 import Data.IORef
 import Graphics.Gloss.Data.Display
+import Graphics.Rendering.FTGL (Font)
 
 
 -- | The functions every backend window managed backend needs to support.
@@ -70,6 +71,9 @@ class Backend a where
 
         -- | Function that puts the current thread to sleep for 'n' seconds.
         sleep                      :: IORef a -> Double -> IO ()
+
+        -- | Get the default font used to paint
+        font                       :: IORef a -> IO (Maybe Font)
 
 
 -- The callbacks should work for all backends. We pass a reference to the

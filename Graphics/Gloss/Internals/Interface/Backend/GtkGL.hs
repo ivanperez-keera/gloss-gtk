@@ -19,6 +19,7 @@ import qualified Graphics.UI.Gtk                                  as Gtk
 import           Graphics.UI.Gtk.OpenGL
 import qualified System.Exit                                      as System
 import           System.Posix.Clock
+import           Graphics.Rendering.FTGL
 
 
 -- | We Need to keep a reference to the gl widget,
@@ -26,14 +27,15 @@ import           System.Posix.Clock
 --   not, and we need to keep track of the time when
 --   the initialisation took place.
 data GtkGLState = GtkGLState
-  { glGtk      :: (Maybe GLUTGtk.GLUTGtk)   -- gl widget, if any
-  , glWindowed :: Bool              -- whether gl is the top widget or not
-  , glInitTime :: (Maybe TimeSpec)  -- when initialised was first called
+  { glGtk      :: Maybe GLUTGtk.GLUTGtk   -- gl widget, if any
+  , glWindowed :: Bool            -- whether gl is the top widget or not
+  , glInitTime :: Maybe TimeSpec  -- when initialised was first called
+  , glFont     :: Maybe Font
   }
 
 -- | Initial state: no widget, no window, no time
 gtkStateInit :: GtkGLState
-gtkStateInit  = GtkGLState Nothing False Nothing
+gtkStateInit  = GtkGLState Nothing False Nothing Nothing
 
 instance Backend GtkGLState where
         initBackendState           = gtkStateInit
@@ -61,22 +63,22 @@ instance Backend GtkGLState where
         -- Call the main gui
         -- This function will return when something calls leaveMainLoop
         runMainLoop ref 
-         = do (GtkGLState mgl windowed _) <- readIORef ref
+         = do (GtkGLState mgl windowed _ _) <- readIORef ref
               when (windowed && isJust mgl) Gtk.mainGUI
 
         postRedisplay ref
-         = do (GtkGLState mgl _ _) <- readIORef ref
+         = do (GtkGLState mgl _ _ _) <- readIORef ref
               maybe (return ()) GLUTGtk.postRedisplay mgl
 
         getWindowDimensions ref 
-         = do (GtkGLState mgl windowed _) <- readIORef ref
+         = do (GtkGLState mgl windowed _ _) <- readIORef ref
               maybe (return (0,0)) getContainerSize mgl
               -- putStrLn.("new size" ++).show =<< x
               -- x
           where getContainerSize (GLUTGtk.GLUTGtk { GLUTGtk.widget = w }) = Gtk.widgetGetSize w
 
         elapsedTime ref
-         = do (GtkGLState _ _ mts) <- readIORef ref
+         = do (GtkGLState _ _ mts _) <- readIORef ref
 
               -- TODO: iperez: check if there's a better, maybe even faster
               -- time library, since do not need the precision provided by this one
@@ -90,6 +92,9 @@ instance Backend GtkGLState where
         sleep _ sec
          = do -- putStrLn $ "Sleeping for: " ++ show sec
               threadDelay (round $ sec * 100000)
+
+        font ref
+         = fmap glFont $ readIORef ref
 
 -- Initialise -----------------------------------------------------------------
 initializeGtkGL
@@ -105,7 +110,11 @@ initializeGtkGL ref debug = do
 
      -- Save initial time
      ts <- getTime Realtime
-     modifyIORef ref (\st -> st { glInitTime = Just ts })
+
+     font <- createTextureFont "FreeSans.ttf"
+     setFontFaceSize font 224 72
+
+     modifyIORef ref (\st -> st { glInitTime = Just ts, glFont = Just font })
 
 -- Open Window ----------------------------------------------------------------
 openWindowGtkGL
@@ -154,7 +163,7 @@ dumpStateGtkGL
         -> IO ()
 
 dumpStateGtkGL st = do
- (GtkGLState mgl w mts) <- readIORef st
+ (GtkGLState mgl w mts _) <- readIORef st
  putStrLn $ " Gtk status report: widget created: " ++ show (isJust mgl)
           ++ ", windowed: " ++ show w
           ++ ", time set: " ++ show (isJust mts)
@@ -164,7 +173,7 @@ installDisplayCallbackGtkGL
         :: IORef GtkGLState -> [Callback]
         -> IO ()
 installDisplayCallbackGtkGL ref callbacks
-        = do (GtkGLState mgl _ _) <- readIORef ref
+        = do (GtkGLState mgl _ _ _) <- readIORef ref
              flip (maybe (return ())) mgl $ \gl ->
                modifyIORef (GLUTGtk.displayCallback gl) $ \_ -> 
                                      (callbackDisplay ref callbacks)
@@ -174,7 +183,7 @@ callbackDisplay
         -> IO ()
 
 callbackDisplay ref callbacks 
- = do (GtkGLState mgl _ _) <- readIORef ref
+ = do (GtkGLState mgl _ _ _) <- readIORef ref
       case mgl of
        Nothing -> error "Trying to display a non-existing gl widget"
        Just gl -> do
@@ -199,7 +208,7 @@ installReshapeCallbackGtkGL
         -> IO ()
 
 installReshapeCallbackGtkGL ref callbacks
-        = do (GtkGLState mgl _ _) <- readIORef ref
+        = do (GtkGLState mgl _ _ _) <- readIORef ref
              flip (maybe (return ())) mgl $ \gl ->
                modifyIORef (GLUTGtk.reshapeCallback gl) $ const $
                                (callbackReshape ref callbacks)
@@ -223,7 +232,7 @@ installKeyMouseCallbackGtkGL
         -> IO ()
 
 installKeyMouseCallbackGtkGL ref callbacks
-        = do (GtkGLState mgl _ _) <- readIORef ref
+        = do (GtkGLState mgl _ _ _) <- readIORef ref
              flip (maybe (return ())) mgl $ \gl ->
                modifyIORef (GLUTGtk.keyboardMouseCallback gl) $ const $
                                (callbackKeyMouse ref callbacks)
@@ -256,7 +265,7 @@ installMotionCallbackGtkGL
         -> IO ()
 
 installMotionCallbackGtkGL ref callbacks
- = do (GtkGLState mgl _ _) <- readIORef ref
+ = do (GtkGLState mgl _ _ _) <- readIORef ref
       flip (maybe (return ())) mgl $ \gl ->
         modifyIORef (GLUTGtk.mouseMoveCallback gl) $ const $
           (callbackMotion ref callbacks)

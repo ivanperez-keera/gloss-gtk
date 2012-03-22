@@ -45,7 +45,8 @@ Library
         bytestring == 0.9.*,
         OpenGL     == 2.5.*,
         GLUT       == 2.3.*,
-        bmp        == 1.2.*
+        bmp        == 1.2.*,
+        FTGL       == 1.333
 
   ghc-options:      -O2 -Wall
 

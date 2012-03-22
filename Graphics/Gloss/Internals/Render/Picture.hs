@@ -5,21 +5,23 @@
 module Graphics.Gloss.Internals.Render.Picture
 	( renderPicture )
 where
-import	Graphics.Gloss.Data.Picture
-import	Graphics.Gloss.Data.Color
-import	Graphics.Gloss.Internals.Interface.Backend
-import	Graphics.Gloss.Internals.Interface.ViewPort
-import	Graphics.Gloss.Internals.Render.State
-import	Graphics.Gloss.Internals.Render.Common
-import	Graphics.Gloss.Internals.Render.Circle
-import	Graphics.Gloss.Internals.Render.Bitmap
-import  System.Mem.StableName
-import  Foreign.ForeignPtr
-import	Data.IORef
-import  Data.List
-import  Control.Monad
-import	Graphics.Rendering.OpenGL		(($=), get)
-import	qualified Graphics.Rendering.OpenGL.GL	as GL
+import Control.Monad
+import Data.IORef
+import Data.List
+import Data.Maybe
+import Foreign.ForeignPtr
+import Graphics.Gloss.Data.Color
+import Graphics.Gloss.Data.Picture
+import Graphics.Gloss.Internals.Interface.Backend
+import Graphics.Gloss.Internals.Interface.ViewPort
+import Graphics.Gloss.Internals.Render.Bitmap
+import Graphics.Gloss.Internals.Render.Circle
+import Graphics.Gloss.Internals.Render.Common
+import Graphics.Gloss.Internals.Render.State
+import Graphics.Rendering.FTGL
+import Graphics.Rendering.OpenGL	      (($=), get)
+import qualified Graphics.Rendering.OpenGL.GL as GL
+import System.Mem.StableName
 
 
 -- ^ Render a picture using the given render options and viewport.
@@ -56,15 +58,16 @@ renderPicture
 	setLineSmooth	(stateLineSmooth renderS)
 	setBlendAlpha	(stateBlendAlpha renderS)
 	
-	drawPicture (viewPortScale viewS) picture
+        ttfFont <- font backendRef
+	drawPicture (viewPortScale viewS) ttfFont picture
 
 drawPicture
 	:: ( ?modeWireframe     :: Bool
 	   , ?modeColor         :: Bool
 	   , ?refTextures       :: IORef [Texture])
-	=> Float -> Picture -> IO ()	  
+	=> Float -> (Maybe Font) -> Picture -> IO ()	  
 
-drawPicture circScale picture
+drawPicture circScale ttfFont picture
  = {-# SCC "drawComponent" #-}
    case picture of
 
@@ -102,10 +105,10 @@ drawPicture circScale picture
 	 -> do -- FIXME: iperez: This code doesn't work
                -- right now. I'm commenting it out until I
                -- can deal with the issue.
-               return ()
-               -- GL.blend	$= GL.Disabled
-               -- GL.preservingMatrix $ GLUT.renderString GLUT.Roman str
-	-- GL.blend	$= GL.Enabled
+               when (isJust ttfFont) $ do
+                 GL.blend $= GL.Disabled
+                 GL.preservingMatrix $ renderFont (fromJust ttfFont) str Front
+                 GL.blend $= GL.Enabled
 
 	-- colors with float components.
 	Color col p
@@ -116,11 +119,11 @@ drawPicture circScale picture
 		let (r, g, b, a) = rgbaOfColor col
 
 		GL.currentColor	 $= GL.Color4 (gf r) (gf g) (gf b) (gf a)
-		drawPicture circScale p
+		drawPicture circScale ttfFont p
 		GL.currentColor	$= oldColor		
 
 	 |  otherwise
-	 -> 	drawPicture circScale p
+	 -> 	drawPicture circScale ttfFont p
 
 
 	-- ease up on GL.preservingMatrix
@@ -136,24 +139,24 @@ drawPicture circScale picture
 	 -> GL.preservingMatrix
 	  $ do	GL.translate (GL.Vector3 (gf tx) (gf ty) 0)
 		GL.rotate (gf deg) (GL.Vector3 0 0 (-1))
-		drawPicture circScale p
+		drawPicture circScale ttfFont p
 
 	-----
 	Translate tx ty	p
 	 -> GL.preservingMatrix
 	  $ do	GL.translate (GL.Vector3 (gf tx) (gf ty) 0)
-		drawPicture circScale p
+		drawPicture circScale ttfFont p
 
 	Rotate deg p
 	 -> GL.preservingMatrix
 	  $ do	GL.rotate (gf deg) (GL.Vector3 0 0 (-1))
-		drawPicture circScale p
+		drawPicture circScale ttfFont p
 
 	Scale sx sy p
 	 -> GL.preservingMatrix
 	  $ do	GL.scale (gf sx) (gf sy) 1
 		let mscale	= max sx sy
-		drawPicture (circScale * mscale) p
+		drawPicture (circScale * mscale) ttfFont p
 			
 	-----
 	Bitmap width height imgData cacheMe
@@ -195,7 +198,7 @@ drawPicture circScale picture
                 
 
 	Pictures ps
-	 -> mapM_ (drawPicture circScale) ps
+	 -> mapM_ (drawPicture circScale ttfFont) ps
 	
 -- Textures ---------------------------------------------------------------------------------------
 -- | Load a texture.

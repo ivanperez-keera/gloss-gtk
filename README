@@ -2,14 +2,21 @@ This project adds a new backend to gloss that can be used to embed
 gloss images/animations/simulations in GTK+ applications. It uses
 the gtkglext package available in Hackage.
 
-Current status is: not finished, still under development.  Do not use (I'm not
-joking here) in production just yet.
+Current status is: not finished, still under development.  Do not use
+(I'm not joking here) in production just yet.
 
-How this works: in the arguments to 'display', use the InWidget constructor,
-and pass an eventbox as first argument. The necessary event handlers will be
-installed there.
+How this works: in the arguments to 'display', use the InWidget
+constructor, and pass a Gtk container as first argument. The canvas
+will be added to the container using Graphics.UI.Gtk.containerAdd.
 
-Why an event box: I understand that this is not the best solution. It's work in
-progress. In a few days, it will probably turn into a (ContainerClass a) or
-even something more generic. If you have ideas on this regard, I'll be happy to
-know.
+QUICK STATUS OVERVIEW
+
+| Feature              | Status                 |
+|----------------------+------------------------|
+| Animations           | Working                |
+| Simulations          | Working                |
+| Games                | Working                |
+| Mouse interaction    | Working                |
+| Keyboard interaction | Not tested, might work |
+| Fonts                | Not working            |
+| Background colours   | Not working            |

@@ -243,7 +243,7 @@ callbackKeyMouse ref callbacks key keystate modifiers mpos
  | otherwise
  = sequence_ $
      map (\f -> f (fromJust key') keyState' modifiers' pos') 
-         [f ref | KeyMouse f <- callbacks]
+       [f ref | KeyMouse f <- callbacks]
    where
      key'       = gtkKeyToKey key
      keyState'  = gtkKeyStateToKeyState keystate
@@ -294,10 +294,10 @@ callbackIdle ref callbacks
         = sequence_ [ f ref | (Idle f) <- callbacks]
 
 -----------------------------------------------------------------------------
--- | Convert GLUTs key codes to our internal ones.
+-- | Convert GLUTGtk's key codes to our internal ones.
 gtkKeyToKey :: GLUTGtk.Key-> Maybe Key
-gtkKeyToKey (GLUTGtk.Key key)
- = case key of
+gtkKeyToKey (GLUTGtk.Key key) =
+  case key of
     "Space"  -> Just $ SpecialKey KeySpace
     "Return" -> Just $ SpecialKey KeyEnter
     "Tab"    -> Just $ SpecialKey KeyTab
@@ -305,11 +305,19 @@ gtkKeyToKey (GLUTGtk.Key key)
     "Delete" -> Just $ SpecialKey KeyDelete
     [x]      -> Just $ Char (toLower x)
     _        -> Nothing
-gtkKeyToKey (GLUTGtk.MouseButton btn) = case btn of
+
+gtkKeyToKey (GLUTGtk.MouseButton btn) =
+  case btn of
     GLUTGtk.LeftButton    -> Just $ MouseButton LeftButton
     GLUTGtk.MiddleButton  -> Just $ MouseButton MiddleButton
     GLUTGtk.RightButton   -> Just $ MouseButton RightButton
     GLUTGtk.OtherButton i -> Just $ MouseButton (AdditionalButton i)
+
+gtkKeyToKey (GLUTGtk.MouseScroll dir) =
+  case dir of
+    GLUTGtk.ScrollUp   -> Just $ MouseButton WheelUp
+    GLUTGtk.ScrollDown -> Just $ MouseButton WheelDown
+    _                  -> Nothing
 
 -- | Convert GLUTGtk's key state to our internal ones.
 gtkKeyStateToKeyState :: GLUTGtk.KeyState -> KeyState

@@ -4,7 +4,7 @@
 -- It should be substituted by our own code or simply removed.
 module Graphics.UI.GLUTGtk
    ( module Graphics.UI.GLUTGtk
-   , KeyVal, MouseButton(..), Modifier(..)
+   , KeyVal, MouseButton(..), Modifier(..), ScrollDirection(..)
    )
   where
 
@@ -29,7 +29,7 @@ data Position = Position Double Double
 data KeyState = Down | Up
   deriving (Eq, Ord, Show)
 
-data Key = Key String | MouseButton MouseButton
+data Key = Key String | MouseButton MouseButton | MouseScroll ScrollDirection
   deriving (Eq, Show)
 
 data GLUTGtk = forall a . ContainerClass a => GLUTGtk
@@ -62,11 +62,13 @@ glut container (Size width height) = do
   set container [ widgetCanFocus := True ]
 
   -- Add canvas to Event box
-  set container [ containerBorderWidth := 0, containerChild := canvas ]
+  set container [ containerBorderWidth := 0]
+  containerAdd container canvas
 
   widgetAddEvents canvas [ PointerMotionMask, PointerMotionHintMask
-                         , ButtonPressMask, ButtonMotionMask
-			 , Button1MotionMask, KeyPressMask
+                         , ButtonPressMask,   ButtonMotionMask
+			 , Button1MotionMask, Button2MotionMask
+                         , Button3MotionMask, KeyPressMask, ScrollMask
 			 , KeyReleaseMask
 			 ]
 
@@ -101,10 +103,19 @@ glut container (Size width height) = do
           cb <- readIORef keyboardMouseCallback'
           cb (Key v) s ms Nothing
 
+  let handleScroll = do
+        d      <- eventScrollDirection
+        (x, y) <- eventCoordinates
+        ms     <- eventModifier
+        liftIO $ do
+          cb <- readIORef keyboardMouseCallback'
+          cb (MouseScroll d) Down ms (Just (Position x y))
+
   _ <- canvas `on` buttonPressEvent   $ tryEvent $ handleButton Down
   _ <- canvas `on` buttonReleaseEvent $ tryEvent $ handleButton Up
   _ <- canvas `on` keyPressEvent      $ tryEvent $ handleKey Down
   _ <- canvas `on` keyReleaseEvent    $ tryEvent $ handleKey Up
+  _ <- canvas `on` scrollEvent        $ tryEvent $ handleScroll
 
   let handleMousemove = do
         (x,y) <- eventCoordinates

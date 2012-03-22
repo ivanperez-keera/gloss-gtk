@@ -17,6 +17,8 @@ data Display
         -- | Display inside a GTK eventbox using an opengl widget
         | forall a . ContainerClass a => InWidget a (Int, Int)
 
+
+-- We do this to avoid using UndecidableInstances
 instance Show Display where
 
  show (InWindow name size pos) =
@@ -24,10 +26,9 @@ instance Show Display where
  show (FullScreen size) =
     "FullScreen " ++ show size
  show (InWidget _w size) =
-    "InWidget _ " ++ show size
+    "InWidget <container> " ++ show size
 
 instance Eq Display where
-
  (InWindow n1 s1 p1) == (InWindow n2 s2 p2) = (n1,s1,p1) == (n2,s2,p2)
- (FullScreen s1) == (FullScreen s2) = s1 == s2
- _ == _ = False
+ (FullScreen s1)     == (FullScreen s2)     = s1 == s2
+ _                   == _                   = False

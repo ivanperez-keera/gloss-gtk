@@ -70,9 +70,10 @@ instance Backend GtkGLState where
 
         getWindowDimensions ref 
          = do (GtkGLState mgl windowed _) <- readIORef ref
-              maybe (return (0,0)) (Gtk.widgetGetSize . GLUTGtk.widget) mgl
+              maybe (return (0,0)) getContainerSize mgl
               -- putStrLn.("new size" ++).show =<< x
               -- x
+          where getContainerSize (GLUTGtk.GLUTGtk { GLUTGtk.widget = w }) = Gtk.widgetGetSize w
 
         elapsedTime ref
          = do (GtkGLState _ _ mts) <- readIORef ref
@@ -119,15 +120,12 @@ openWindowGtkGL ref display
         case display of
           InWindow windowName (sizeX, sizeY) (posX, posY) -> 
             do w      <- Gtk.windowNew 
-               eventb <- Gtk.eventBoxNew 
-               gl     <- GLUTGtk.glut eventb (GLUTGtk.Size sizeX sizeY)
+               gl     <- GLUTGtk.glut w (GLUTGtk.Size sizeX sizeY)
                modifyIORef (GLUTGtk.realizeCallback gl) $ const $
                  GL.drawBuffer $= GL.BackBuffers
                  -- glDrawableSwapBuffers
 
-               Gtk.set w [ Gtk.containerBorderWidth := 0
-                         , Gtk.containerChild := eventb
-                         ]
+               Gtk.set w [ Gtk.containerBorderWidth := 0]
                Gtk.windowMove w posX posY
                Gtk.widgetShowAll w
 
@@ -138,7 +136,13 @@ openWindowGtkGL ref display
 
           InWidget bin (sizeX, sizeY) ->
             do gl <- GLUTGtk.glut bin (GLUTGtk.Size sizeX sizeY)
-               Gtk.widgetShowAll (GLUTGtk.widget gl)
+
+               -- We need this aux function to extract the widget from the
+               -- GLUTGtk value
+               let containerShowAll (GLUTGtk.GLUTGtk { GLUTGtk.widget = w }) =
+                      Gtk.widgetShowAll w
+
+               containerShowAll gl
                modifyIORef (GLUTGtk.realizeCallback gl) $ const $
                  GL.drawBuffer $= GL.BackBuffers
                modifyIORef ref (\st -> st { glGtk      = Just gl

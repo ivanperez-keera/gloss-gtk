@@ -1,3 +1,4 @@
+{-# LANGUAGE ExistentialQuantification #-}
 -- | FIXME: iperez: This code was taken from pastebin. Although it is publicly
 -- available, its redistribution can present a violation of the copyright law.
 -- It should be substituted by our own code or simply removed.
@@ -31,20 +32,20 @@ data KeyState = Down | Up
 data Key = Key String | MouseButton MouseButton
   deriving (Eq, Show)
 
-data GLUTGtk = GLUTGtk
+data GLUTGtk = forall a . ContainerClass a => GLUTGtk
   { realizeCallback       :: IORef RealizeCallback
   , reshapeCallback       :: IORef ReshapeCallback
   , displayCallback       :: IORef DisplayCallback
   , keyboardMouseCallback :: IORef KeyboardMouseCallback
   , mouseMoveCallback     :: IORef MouseMoveCallback
   , postRedisplay         :: IO ()
-  , widget                :: EventBox
+  , widget                :: a
   }
 
 -- FIXME: iperez: do we really need an event box? Could it just be
 -- a container? The canvas already captures the events.
-glut :: EventBox -> Size -> IO GLUTGtk
-glut eventb (Size width height) = do
+glut :: ContainerClass a => a -> Size -> IO GLUTGtk
+glut container (Size width height) = do
 
   -- Initialize callback IORefs
   realizeCallback'       <- newIORef $ return ()
@@ -57,9 +58,11 @@ glut eventb (Size width height) = do
   config <- glConfigNew [ GLModeRGBA, GLModeDouble ]
   canvas <- glDrawingAreaNew config
   widgetSetSizeRequest canvas width height
+  set canvas [ widgetCanFocus := True ]
+  set container [ widgetCanFocus := True ]
 
   -- Add canvas to Event box
-  set eventb [ containerBorderWidth := 0, containerChild := canvas ]
+  set container [ containerBorderWidth := 0, containerChild := canvas ]
 
   widgetAddEvents canvas [ PointerMotionMask, PointerMotionHintMask
                          , ButtonPressMask, ButtonMotionMask
@@ -120,5 +123,5 @@ glut eventb (Size width height) = do
     , keyboardMouseCallback = keyboardMouseCallback'
     , mouseMoveCallback     = mouseMoveCallback'
     , postRedisplay         = widgetQueueDraw canvas
-    , widget                = eventb
+    , widget                = container
     }

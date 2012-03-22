@@ -4,7 +4,7 @@ module Graphics.Gloss.Data.Display
         (Display(..))
 where
 
-import Graphics.UI.Gtk (EventBox)
+import Graphics.UI.Gtk (ContainerClass)
 
 -- | Describes how Gloss should display its output.
 data Display 
@@ -15,7 +15,7 @@ data Display
         | FullScreen (Int, Int) 
 
         -- | Display inside a GTK eventbox using an opengl widget
-        | InWidget EventBox (Int, Int)
+        | forall a . ContainerClass a => InWidget a (Int, Int)
 
 instance Show Display where
 

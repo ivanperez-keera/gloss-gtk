@@ -41,6 +41,8 @@ data GLUTGtk = GLUTGtk
   , widget                :: EventBox
   }
 
+-- FIXME: iperez: do we really need an event box? Could it just be
+-- a container? The canvas already captures the events.
 glut :: EventBox -> Size -> IO GLUTGtk
 glut eventb (Size width height) = do
 
@@ -58,6 +60,12 @@ glut eventb (Size width height) = do
 
   -- Add canvas to Event box
   set eventb [ containerBorderWidth := 0, containerChild := canvas ]
+
+  widgetAddEvents canvas [ PointerMotionMask, PointerMotionHintMask
+                         , ButtonPressMask, ButtonMotionMask
+			 , Button1MotionMask, KeyPressMask
+			 , KeyReleaseMask
+			 ]
 
   -- Update drawing when necessary
   _ <- onRealize canvas $ withGLDrawingArea canvas $ \_ -> do
@@ -89,10 +97,11 @@ glut eventb (Size width height) = do
         liftIO $ do
           cb <- readIORef keyboardMouseCallback'
           cb (Key v) s ms Nothing
-  _ <- eventb `on` buttonPressEvent   $ tryEvent $ handleButton Down
-  _ <- eventb `on` buttonReleaseEvent $ tryEvent $ handleButton Up
-  _ <- eventb `on` keyPressEvent      $ tryEvent $ handleKey Down
-  _ <- eventb `on` keyReleaseEvent    $ tryEvent $ handleKey Up
+
+  _ <- canvas `on` buttonPressEvent   $ tryEvent $ handleButton Down
+  _ <- canvas `on` buttonReleaseEvent $ tryEvent $ handleButton Up
+  _ <- canvas `on` keyPressEvent      $ tryEvent $ handleKey Down
+  _ <- canvas `on` keyReleaseEvent    $ tryEvent $ handleKey Up
 
   let handleMousemove = do
         (x,y) <- eventCoordinates
@@ -100,7 +109,8 @@ glut eventb (Size width height) = do
            cb <- readIORef mouseMoveCallback'
            cb (Position x y)
 
-  _ <- eventb `on` motionNotifyEvent  $ tryEvent $ handleMousemove
+  -- _ <- eventb `on` motionNotifyEvent  $ tryEvent $ handleMousemove
+  _ <- canvas `on` motionNotifyEvent  $ tryEvent $ handleMousemove
 
   -- 
   return $ GLUTGtk

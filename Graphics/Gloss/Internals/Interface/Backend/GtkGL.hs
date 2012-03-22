@@ -72,12 +72,14 @@ instance Backend GtkGLState where
          = do (GtkGLState mgl windowed _) <- readIORef ref
               maybe (return (0,0)) (Gtk.widgetGetSize . GLUTGtk.widget) mgl
               -- putStrLn.("new size" ++).show =<< x
+              -- x
 
         elapsedTime ref
          = do (GtkGLState _ _ mts) <- readIORef ref
 
               -- TODO: iperez: check if there's a better, maybe even faster
               -- time library, since do not need the precision provided by this one
+
               t <- getTime Realtime
               let t1 = toMicro (sec t) (nsec t)
                   t2 = maybe t1 (\ts -> toMicro (sec ts) (nsec ts)) mts
@@ -101,7 +103,7 @@ initializeGtkGL ref debug = do
      _ <- Gtk.initGUI -- we ignore gtk args
 
      -- Save initial time
-     ts <- getTime Monotonic
+     ts <- getTime Realtime
      modifyIORef ref (\st -> st { glInitTime = Just ts })
 
 -- Open Window ----------------------------------------------------------------
@@ -172,9 +174,11 @@ callbackDisplay ref callbacks
       case mgl of
        Nothing -> error "Trying to display a non-existing gl widget"
        Just gl -> do
+
         -- clear the display
-        GL.clear [GL.ColorBuffer] -- , GL.DepthBuffer
-        -- GL.clearColor $= (GL.Color4 1.0 0.0 0.0 (0.5 :: GL.GLclampf))
+        GL.clear [GL.ColorBuffer]
+        GL.clearColor $= (GL.Color4 1.0 1.0 1.0 (1.0 :: GL.GLclampf))
+        GL.color $ GL.Color4 0 0 0 (1 :: GL.GLfloat)
 
         -- get the display callbacks from the chain and run them
         sequence_ [f ref | (Display f) <- callbacks]
@@ -233,13 +237,14 @@ callbackKeyMouse ref callbacks key keystate modifiers mpos
  = return ()
 
  | otherwise
- = sequence_ $ map (\f -> f (fromJust key') keyState' modifiers' pos)
-                   [f ref | KeyMouse f <- callbacks]
+ = sequence_ $
+     map (\f -> f (fromJust key') keyState' modifiers' pos') 
+         [f ref | KeyMouse f <- callbacks]
    where
      key'       = gtkKeyToKey key
      keyState'  = gtkKeyStateToKeyState keystate
      modifiers' = gtkModifiersToModifiers modifiers
-     pos        = maybe (0,0) (\(GLUTGtk.Position x y) -> (fromEnum x, fromEnum y)) mpos
+     pos'       = maybe (0,0) (\(GLUTGtk.Position x y) -> (round x, round y)) mpos
 
 -- Motion Callback ------------------------------------------------------------
 installMotionCallbackGtkGL
@@ -258,10 +263,11 @@ callbackMotion
         -> IO ()
 
 callbackMotion ref callbacks (GLUTGtk.Position posX posY)
- = do   let pos = (fromEnum posX, fromEnum posY)
-        sequence_
-         $ map  (\f -> f pos)
-                [f ref | Motion f <- callbacks]
+ = let pos = (fromEnum posX, fromEnum posY)
+   in do 
+      sequence_
+        $ map (\f -> f pos) l
+   where l = [f ref | Motion f <- callbacks]
 
 
 -- Idle Callback --------------------------------------------------------------

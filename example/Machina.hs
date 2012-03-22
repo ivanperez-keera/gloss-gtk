@@ -1,11 +1,9 @@
 {-# LANGUAGE PackageImports #-}
 
 import "gloss-gtk" Graphics.Gloss
-import qualified Graphics.UI.Gtk as Gtk
-import           Graphics.UI.Gtk (AttrOp((:=)))
--- import           Graphics.UI.Gtk.OpenGL
--- import qualified Graphics.Rendering.OpenGL as GL
--- import           Graphics.Rendering.OpenGL (($=))
+import qualified   Graphics.UI.Gtk as Gtk
+import             Graphics.UI.Gtk (AttrOp((:=)))
+import             Control.Monad.Trans
 
 main = do
   _ <- Gtk.initGUI
@@ -19,6 +17,8 @@ main = do
   Gtk.boxPackStart vbox btn Gtk.PackNatural 0
 
   Gtk.set window [ Gtk.containerBorderWidth := 0, Gtk.containerChild := vbox ]
+
+  window `Gtk.on` Gtk.deleteEvent $ liftIO Gtk.mainQuit >> return False
 
   Gtk.widgetShowAll window
   drawPic ebox

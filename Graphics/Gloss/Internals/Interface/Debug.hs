@@ -61,9 +61,7 @@ dumpFragmentState
  	-- blend		<- get GL.blend
 	-- blendEquation	<- get GL.blendEquation
 	-- blendFunc	<- get GL.blendFunc
-	-- 
 	-- putStr	$  "* dumpFragmentState\n"
 	-- 	++ "  blend              = " ++ show blend		++ "\n"
 	-- 	++ "  blend equation     = " ++ show blendEquation	++ "\n"
 	-- 	++ "  blend func         = " ++ show blendFunc		++ "\n"
-	-- 	++ "\n"

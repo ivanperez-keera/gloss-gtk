@@ -25,10 +25,22 @@
 --   `simulate`.
 --
 --   If you want to manage your own key\/mouse events then use `play`.
---
+-- 
 --   Gloss uses OpenGL under the hood, but you don't have to worry about any of that.
 --
+--   Gloss programs should be compiled with @-threaded@, otherwise the GHC runtime
+--   will limit the frame-rate to around 20Hz.
+--
+--
 -- @Release Notes:
+--
+-- For 1.7.0:
+--   * Tweaked circle level-of-detail reduction code.
+--   * Increased frame rate cap to 100hz.
+--   Thanks to Doug Burke
+--   * Primitives for drawing arcs and sectors.
+--   Thanks to Thomas DuBuisson
+--   * IO versions of animate, simplate and play.
 --
 -- For 1.6.0:
 --   Thanks to Anthony Cowley
@@ -61,7 +73,7 @@ where
 import Graphics.Gloss.Data.Display
 import Graphics.Gloss.Data.Picture
 import Graphics.Gloss.Data.Color
-import Graphics.Gloss.Internals.Interface.Display
-import Graphics.Gloss.Internals.Interface.Animate
-import Graphics.Gloss.Internals.Interface.Simulate
-import Graphics.Gloss.Internals.Interface.Game
+import Graphics.Gloss.Interface.Pure.Display
+import Graphics.Gloss.Interface.Pure.Animate
+import Graphics.Gloss.Interface.Pure.Simulate
+import Graphics.Gloss.Interface.Pure.Game

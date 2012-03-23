@@ -1,8 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Graphics.Gloss.Internals.Interface.Game
-	( play
-	, playWithBackend
+	( playWithBackendIO
 	, Event(..))
 where
 import Graphics.Gloss.Data.Color
@@ -29,21 +28,8 @@ data Event
 	| EventMotion (Float, Float)
 	deriving (Eq, Show)
 
--- | Play a game in a window. 
-play    :: forall world
-        .  Display                      -- ^ Display mode.
-        -> Color                        -- ^ Background color.
-	-> Int				-- ^ Number of simulation steps to take for each second of real time.
-	-> world 			-- ^ The initial world.
-	-> (world -> Picture)	 	-- ^ A function to convert the world a picture.
-	-> (Event -> world -> world)	-- ^ A function to handle input events.
-	-> (Float -> world -> world)   	-- ^ A function to step the world one iteration.
-					--   It is passed the period of time (in seconds) needing to be advanced.
-	-> IO ()
 
-play    = playWithBackend defaultBackendState
-
-playWithBackend
+playWithBackendIO
 	:: forall world a
 	.  Backend a
 	=> a				-- ^ Initial state of the backend
@@ -51,13 +37,13 @@ playWithBackend
 	-> Color			-- ^ Background color.
 	-> Int				-- ^ Number of simulation steps to take for each second of real time.
 	-> world 			-- ^ The initial world.
-	-> (world -> Picture)	 	-- ^ A function to convert the world a picture.
+	-> (world -> IO Picture)	-- ^ A function to convert the world to a picture.
 	-> (Event -> world -> world)	-- ^ A function to handle input events.
-	-> (Float -> world -> world)   	-- ^ A function to step the world one iteration.
+	-> (Float -> world -> IO world)	-- ^ A function to step the world one iteration.
 					--   It is passed the period of time (in seconds) needing to be advanced.
 	-> IO ()
 
-playWithBackend
+playWithBackendIO
 	backend
         display
 	backgroundColor
@@ -85,7 +71,7 @@ playWithBackend
 	     = do
 		-- convert the world to a picture
 		world		<- readIORef worldSR
-		let picture	= worldToPicture world
+		picture		<- worldToPicture world
 	
 		-- display the picture in the current view
 		renderS		<- readIORef renderSR

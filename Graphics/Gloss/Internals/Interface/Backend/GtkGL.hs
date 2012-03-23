@@ -20,6 +20,7 @@ import           Graphics.UI.Gtk.OpenGL
 import qualified System.Exit                                      as System
 import           System.Posix.Clock
 import           Graphics.Rendering.FTGL
+import           Paths_gloss_gtk
 
 
 -- | We Need to keep a reference to the gl widget,
@@ -111,7 +112,8 @@ initializeGtkGL ref debug = do
      -- Save initial time
      ts <- getTime Realtime
 
-     font <- createTextureFont "FreeSans.ttf"
+     fn <- getDataFileName "data/FreeSans.ttf"
+     font <- createTextureFont fn
      setFontFaceSize font 224 72
 
      modifyIORef ref (\st -> st { glInitTime = Just ts, glFont = Just font })

@@ -3,7 +3,7 @@
 {-# LANGUAGE ImplicitParams, ScopedTypeVariables #-}
 
 module Graphics.Gloss.Internals.Render.Picture
-	( renderPicture )
+	(renderPicture)
 where
 import Control.Monad
 import Data.IORef
@@ -24,7 +24,7 @@ import qualified Graphics.Rendering.OpenGL.GL as GL
 import System.Mem.StableName
 
 
--- ^ Render a picture using the given render options and viewport.
+-- | Render a picture using the given render options and viewport.
 renderPicture
 	:: forall a . Backend a
 	=> IORef a
@@ -42,7 +42,7 @@ renderPicture
 	-- This GL state doesn't change during rendering, 
 	--	so we can just read it once here
 	(matProj_  :: GL.GLmatrix GL.GLdouble)	
-			<- get $ GL.matrix (Just $ GL.Projection)
+			<- get $ GL.matrix (Just GL.Projection)
 	viewport_  	<- get $ GL.viewport
 	windowSize_	<- getWindowDimensions backendRef
 
@@ -98,14 +98,18 @@ drawPicture circScale ttfFont picture
 	ThickCircle radius thickness
 	 ->  renderCircle 0 0 circScale radius thickness
 	
+        -- arc
+        Arc a1 a2 radius
+         ->  renderArc 0 0 circScale radius a1 a2 0
+             
+        ThickArc a1 a2 radius thickness
+         ->  renderArc 0 0 circScale radius a1 a2 thickness
+             
 	-- stroke text
 	-- 	text looks weird when we've got blend on,
 	--	so disable it during the renderString call.
 	Text str 
-	 -> do -- FIXME: iperez: This code doesn't work
-               -- right now. I'm commenting it out until I
-               -- can deal with the issue.
-               when (isJust ttfFont) $ do
+	 -> do -- iperez: when (isJust ttfFont) $ do
                  GL.blend $= GL.Disabled
                  GL.preservingMatrix $ renderFont (fromJust ttfFont) str Front
                  GL.blend $= GL.Enabled
@@ -113,8 +117,7 @@ drawPicture circScale ttfFont picture
 	-- colors with float components.
 	Color col p
 	 |  ?modeColor
-	 ->  {-# SCC "draw.color" #-}
-   	     do	oldColor 	 <- get GL.currentColor
+	 ->  do	oldColor 	 <- get GL.currentColor
 
 		let (r, g, b, a) = rgbaOfColor col
 
@@ -126,39 +129,61 @@ drawPicture circScale ttfFont picture
 	 -> 	drawPicture circScale ttfFont p
 
 
-	-- ease up on GL.preservingMatrix
-	--	This is an important optimisation for the Eden example,
-	--	as it draws lots of translated circles.
+        -- Translation --------------------------
+        -- Easy translations are done directly to avoid calling GL.perserveMatrix.
 	Translate posX posY (Circle radius)
 	 -> renderCircle posX posY circScale radius 0
 
 	Translate posX posY (ThickCircle radius thickness)
 	 -> renderCircle posX posY circScale radius thickness
 
+	Translate posX posY (Arc a1 a2 radius)
+	 -> renderArc posX posY circScale radius a1 a2 0
+
+	Translate posX posY (ThickArc a1 a2 radius thickness)
+	 -> renderArc posX posY circScale radius a1 a2 thickness
+             
 	Translate tx ty (Rotate deg p)
 	 -> GL.preservingMatrix
 	  $ do	GL.translate (GL.Vector3 (gf tx) (gf ty) 0)
-		GL.rotate (gf deg) (GL.Vector3 0 0 (-1))
+		GL.rotate    (gf deg) (GL.Vector3 0 0 (-1))
 		drawPicture circScale ttfFont p
 
-	-----
 	Translate tx ty	p
 	 -> GL.preservingMatrix
 	  $ do	GL.translate (GL.Vector3 (gf tx) (gf ty) 0)
 		drawPicture circScale ttfFont p
 
+
+        -- Rotation -----------------------------
+        -- Easy rotations are done directly to avoid calling GL.perserveMatrix.
+        Rotate _   (Circle radius)
+         -> renderCircle   0 0 circScale radius 0
+
+        Rotate _   (ThickCircle radius thickness)
+         -> renderCircle   0 0 circScale radius thickness
+
+        Rotate deg (Arc a1 a2 radius)
+         -> renderArc      0 0 circScale radius (a1-deg) (a2-deg) 0
+
+        Rotate deg (ThickArc a1 a2 radius thickness)
+         -> renderArc      0 0 circScale radius (a1-deg) (a2-deg) thickness
+
+        
 	Rotate deg p
 	 -> GL.preservingMatrix
 	  $ do	GL.rotate (gf deg) (GL.Vector3 0 0 (-1))
 		drawPicture circScale ttfFont p
 
+
+        -- Scale --------------------------------
 	Scale sx sy p
 	 -> GL.preservingMatrix
 	  $ do	GL.scale (gf sx) (gf sy) 1
 		let mscale	= max sx sy
 		drawPicture (circScale * mscale) ttfFont p
 			
-	-----
+	-- Bitmap -------------------------------
 	Bitmap width height imgData cacheMe
 	 -> do	
                 -- Load the image data into a texture,
@@ -182,7 +207,7 @@ drawPicture circScale ttfFont picture
 		
 		-- Draw textured polygon
 		GL.renderPrimitive GL.Polygon
-		 $ do zipWithM_
+		 $ zipWithM_
 		        (\(pX, pY) (tX, tY)
 			  -> do GL.texCoord $ GL.TexCoord2 (gf tX) (gf tY)
 		           	GL.vertex   $ GL.Vertex2   (gf pX) (gf pY))
@@ -219,7 +244,7 @@ loadTexture refTextures width height imgData cacheMe
                 = find (\tex -> texName   tex == name
                              && texWidth  tex == width
                              && texHeight tex == height)
-                $ textures
+                textures
                 
         case mTexCached of
          Just tex

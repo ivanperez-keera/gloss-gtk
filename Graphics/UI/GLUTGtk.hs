@@ -40,10 +40,9 @@ data GLUTGtk = forall a . ContainerClass a => GLUTGtk
   , mouseMoveCallback     :: IORef MouseMoveCallback
   , postRedisplay         :: IO ()
   , widget                :: a
+  , glCanvas              :: GLDrawingArea
   }
 
--- FIXME: iperez: do we really need an event box? Could it just be
--- a container? The canvas already captures the events.
 glut :: ContainerClass a => a -> Size -> IO GLUTGtk
 glut container (Size width height) = do
 
@@ -135,4 +134,5 @@ glut container (Size width height) = do
     , mouseMoveCallback     = mouseMoveCallback'
     , postRedisplay         = widgetQueueDraw canvas
     , widget                = container
+    , glCanvas              = canvas
     }

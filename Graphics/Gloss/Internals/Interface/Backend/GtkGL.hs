@@ -76,7 +76,7 @@ instance Backend GtkGLState where
               maybe (return (0,0)) getContainerSize mgl
               -- putStrLn.("new size" ++).show =<< x
               -- x
-          where getContainerSize (GLUTGtk.GLUTGtk { GLUTGtk.widget = w }) = Gtk.widgetGetSize w
+          where getContainerSize (GLUTGtk.GLUTGtk { GLUTGtk.glCanvas = w }) = Gtk.widgetGetSize w
 
         elapsedTime ref
          = do (GtkGLState _ _ mts _) <- readIORef ref
@@ -112,9 +112,10 @@ initializeGtkGL ref debug = do
      -- Save initial time
      ts <- getTime Realtime
 
-     fn <- getDataFileName "data/FreeSans.ttf"
+     -- Load font from file
+     fn   <- getDataFileName "data/DejaVuSansMono.ttf"
      font <- createTextureFont fn
-     setFontFaceSize font 224 72
+     setFontFaceSize font 224 20
 
      modifyIORef ref (\st -> st { glInitTime = Just ts, glFont = Just font })
 

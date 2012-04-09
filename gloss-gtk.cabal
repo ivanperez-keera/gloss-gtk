@@ -20,6 +20,7 @@ Synopsis:
 
 Tested-with: GHC == 7.2.1
 Data-Files:  data/FreeSans.ttf
+             data/DejaVuSansMono.ttf
 
 Flag GLUT
   Description: Enable the GLUT backend

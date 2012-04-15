@@ -4,11 +4,11 @@
 -- It should be substituted by our own code or simply removed.
 module Graphics.UI.GLUTGtk
    ( module Graphics.UI.GLUTGtk
-   , KeyVal, MouseButton(..), Modifier(..), ScrollDirection(..)
+   , KeyVal, MouseButton(..), Modifier(..), ScrollDirection(..), Click(..)
    )
   where
 
-import           Control.Monad             (join)
+import           Control.Monad             (join, when)
 import           Control.Monad.Trans       (liftIO)
 import           Data.IORef                (IORef, newIORef, readIORef)
 import           Graphics.UI.Gtk           hiding (Size, get)
@@ -29,7 +29,7 @@ data Position = Position Double Double
 data KeyState = Down | Up
   deriving (Eq, Ord, Show)
 
-data Key = Key String | MouseButton MouseButton | MouseScroll ScrollDirection
+data Key = Key String | MouseButton MouseButton Click | MouseScroll ScrollDirection
   deriving (Eq, Show)
 
 data GLUTGtk = forall a . ContainerClass a => GLUTGtk
@@ -90,11 +90,13 @@ glut container (Size width height) = do
   -- Install key/mouse handlers
   let handleButton s = do
         b      <- eventButton
+        clk    <- eventClick
         (x, y) <- eventCoordinates
         ms     <- eventModifier
-        liftIO $ do
-          cb <- readIORef keyboardMouseCallback'
-          cb (MouseButton b) s ms (Just (Position x y))
+        when (clk `elem` [SingleClick, DoubleClick, ReleaseClick]) $ 
+          liftIO $ do
+            cb <- readIORef keyboardMouseCallback'
+            cb (MouseButton b clk) s ms (Just (Position x y))
   let handleKey s = do
         v      <- eventKeyName
         ms     <- eventModifier

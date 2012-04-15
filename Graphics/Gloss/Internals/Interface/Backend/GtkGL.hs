@@ -318,12 +318,15 @@ gtkKeyToKey (GLUTGtk.Key key) =
     [x]      -> Just $ Char (toLower x)
     _        -> Nothing
 
-gtkKeyToKey (GLUTGtk.MouseButton btn) =
-  case btn of
-    GLUTGtk.LeftButton    -> Just $ MouseButton LeftButton
-    GLUTGtk.MiddleButton  -> Just $ MouseButton MiddleButton
-    GLUTGtk.RightButton   -> Just $ MouseButton RightButton
-    GLUTGtk.OtherButton i -> Just $ MouseButton (AdditionalButton i)
+gtkKeyToKey (GLUTGtk.MouseButton btn clk) =
+  case (btn, clk) of
+    (GLUTGtk.LeftButton, GLUTGtk.SingleClick)  -> Just $ MouseButton LeftButton
+    (GLUTGtk.LeftButton, GLUTGtk.ReleaseClick) -> Just $ MouseButton LeftButton
+    (GLUTGtk.LeftButton, GLUTGtk.DoubleClick)  -> Just $ MouseButton LeftButtonDouble
+    (GLUTGtk.MiddleButton,  _)                 -> Just $ MouseButton MiddleButton
+    (GLUTGtk.RightButton,   _)                 -> Just $ MouseButton RightButton
+    (GLUTGtk.OtherButton i, _)                 -> Just $ MouseButton (AdditionalButton i)
+    _                                          -> Nothing
 
 gtkKeyToKey (GLUTGtk.MouseScroll dir) =
   case dir of

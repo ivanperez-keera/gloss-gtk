@@ -116,6 +116,7 @@ data Key
 
 data MouseButton
         = LeftButton
+        | LeftButtonDouble
         | MiddleButton
         | RightButton
         | WheelUp

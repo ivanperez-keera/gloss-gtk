@@ -46,9 +46,7 @@ Library
         containers >= 0.3.0 && < 0.5.0,
         bytestring == 0.9.*,
         OpenGL     == 2.5.*,
-        GLUT       == 2.3.*,
-        bmp        == 1.2.*,
-        FTGL       == 1.333
+        bmp        == 1.2.*
 
   ghc-options:      -O2 -Wall
 
@@ -106,13 +104,15 @@ Library
         Paths_gloss_gtk
 
   If flag(GLUT)
+    Build-Depends:
+        GLUT       == 2.3.*
     CPP-Options: -DWITHGLUT
     Other-modules:
         Graphics.Gloss.Internals.Interface.Backend.GLUT
 
   If flag(GLFW)
     Build-Depends:
-        GLFW-b >= 0.1.0.1 && < 0.2
+        GLFW-b >= 0.1.0.1 && < 0.2, GLUT       == 2.3.*
     CPP-Options: -DWITHGLFW
     Other-modules:
         Graphics.Gloss.Internals.Interface.Backend.GLFW
@@ -120,7 +120,7 @@ Library
   If flag(GTK)
     CPP-Options: -DWITHGTK
     Build-Depends:
-        gtk, gtkglext, mtl, clock
+        gtk, gtkglext, mtl, clock, FTGL == 1.333
     Other-modules:
           Graphics.Gloss.Internals.Interface.Backend.GtkGL
         , Graphics.UI.GLUTGtk

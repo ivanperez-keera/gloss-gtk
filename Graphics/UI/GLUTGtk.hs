@@ -8,11 +8,11 @@ module Graphics.UI.GLUTGtk
    )
   where
 
-import           Control.Monad             (join, when)
-import           Control.Monad.Trans       (liftIO)
-import           Data.IORef                (IORef, newIORef, readIORef)
-import           Graphics.UI.Gtk           hiding (Size, get)
-import           Graphics.UI.Gtk.OpenGL
+import  Control.Monad           (join, when)
+import  Control.Monad.Trans     (liftIO)
+import  Data.IORef              (IORef,newIORef, readIORef)
+import  Graphics.UI.Gtk         hiding (Size, get)
+import  Graphics.UI.Gtk.OpenGL
 
 type RealizeCallback = IO ()
 type ReshapeCallback = Size -> IO ()

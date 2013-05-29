@@ -1,7 +1,7 @@
 {-# LANGUAGE PackageImports #-}
 
 import "gloss-gtk" Graphics.Gloss
-import "gloss-gtk" Graphics.Gloss.Interface.Game
+import "gloss-gtk" Graphics.Gloss.Interface.IO.Game
 import qualified   Graphics.UI.Gtk as Gtk
 import             Graphics.UI.Gtk (AttrOp((:=)))
 import             Control.Monad.Trans
@@ -59,7 +59,7 @@ handleEvent event state
         | EventKey (MouseButton LeftButton) Down _ pt@(x,y) <- event
         , State Nothing ss       <- state
         = State (Just [pt])
-                ((Translate x y $ Scale 0.1 0.1 $ Text "Down") : ss)
+                ((Translate x y $ Scale 0.1 0.1 $ Color violet $ Text "Down") : ss)
 
         -- Finish drawing a line, and add it to the picture.
         | EventKey (MouseButton LeftButton) Up _ pt@(x,y)      <- event

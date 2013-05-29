@@ -18,7 +18,7 @@ import           Graphics.UI.Gtk                                  (AttrOp((:=)))
 import qualified Graphics.UI.Gtk                                  as Gtk
 import           Graphics.UI.Gtk.OpenGL
 import qualified System.Exit                                      as System
-import           System.Posix.Clock
+import           System.Clock
 import           Graphics.Rendering.FTGL
 import           Paths_gloss_gtk
 

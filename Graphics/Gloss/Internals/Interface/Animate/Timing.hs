@@ -1,4 +1,5 @@
 {-# OPTIONS_HADDOCK hide #-}
+{-# LANGUAGE Rank2Types #-}
 
 -- | Handles timing of animation.
 --	The main point is that we want to restrict the framerate to something

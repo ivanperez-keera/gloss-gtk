@@ -1,5 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 {-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE Rank2Types    #-}
 
 -- | Callback for exiting the program.
 module Graphics.Gloss.Internals.Interface.Common.Exit

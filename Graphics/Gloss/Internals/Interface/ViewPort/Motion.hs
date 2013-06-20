@@ -1,5 +1,6 @@
 {-# OPTIONS_HADDOCK hide #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE Rank2Types          #-}
 
 module Graphics.Gloss.Internals.Interface.ViewPort.Motion
 	(callback_viewPort_motion)

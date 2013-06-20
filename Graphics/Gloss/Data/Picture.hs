@@ -11,6 +11,7 @@ module Graphics.Gloss.Data.Picture
 	, blank
         , polygon
         , line
+        , thickLine
         , circle, thickCircle
         , arc,    thickArc
         , text
@@ -71,6 +72,9 @@ data Picture
 	
 	-- | A line along an arbitrary path.
 	| Line		Path
+
+	-- | A line along an arbitrary path with tickness
+	| ThickLine     Float Path
 
 	-- | A circle with the given radius.
 	| Circle	Float
@@ -141,6 +145,10 @@ polygon = Polygon
 -- | A line along an arbitrary path.
 line :: Path -> Picture
 line 	= Line
+
+-- | A line along an arbitrary path.
+thickLine :: Float -> Path -> Picture
+thickLine 	= ThickLine
 
 -- | A circle with the given radius.
 circle  :: Float  -> Picture

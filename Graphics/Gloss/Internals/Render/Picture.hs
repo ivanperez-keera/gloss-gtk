@@ -80,6 +80,13 @@ drawPicture circScale ttfFont picture
 	 -> GL.renderPrimitive GL.LineStrip 
 		$ vertexPFs path
 
+        -- Thick line
+        ThickLine t path -> do
+          when (t > 1) $ do
+            lw <- get GL.lineWidth
+            GL.lineWidth $= realToFrac t
+            GL.renderPrimitive GL.LineStrip $ vertexPFs path
+            GL.lineWidth $= lw
 
 	-- polygon (where?)
 	Polygon path
